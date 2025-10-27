@@ -1,49 +1,61 @@
 function loadBooks() {
   fetch('/get_books')
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
       const list = document.getElementById('book-list');
       list.innerHTML = '';
       data.forEach(book => {
         const li = document.createElement('li');
-        li.innerHTML = `${book.title} by ${book.author}
-          <button class="remove" onclick="removeBook('${book.title}')">Remove</button>`;
+        li.innerHTML = `
+          ${book.title} by ${book.author} — Copies: ${book.copies}
+          ${window.location.pathname.includes('admin') ?
+            `<button class='remove' onclick="removeBook('${book.title}')">Remove</button>` :
+            `<button onclick="borrowBook('${book.title}')">Borrow</button>
+             <button onclick="returnBook('${book.title}')">Return</button>`
+          }
+        `;
         list.appendChild(li);
       });
     });
 }
 
 function addBook() {
-  const title = document.getElementById('title').value;
-  const author = document.getElementById('author').value;
-
   const formData = new FormData();
-  formData.append('title', title);
-  formData.append('author', author);
+  formData.append('title', document.getElementById('title').value);
+  formData.append('author', document.getElementById('author').value);
+  formData.append('copies', document.getElementById('copies').value);
 
   fetch('/add_book', { method: 'POST', body: formData })
-    .then(response => response.json())
-    .then(result => {
-      if (result.success) {
-        document.getElementById('title').value = '';
-        document.getElementById('author').value = '';
-        loadBooks();
-      } else {
-        alert('Please fill in both fields');
-      }
+    .then(r => r.json()).then(res => {
+      if (res.success) loadBooks();
     });
 }
 
 function removeBook(title) {
-  const formData = new FormData();
-  formData.append('title', title);
+  const fd = new FormData();
+  fd.append('title', title);
+  fetch('/remove_book', { method: 'POST', body: fd })
+    .then(r => r.json()).then(res => {
+      if (res.success) loadBooks();
+    });
+}
 
-  fetch('/remove_book', { method: 'POST', body: formData })
-    .then(response => response.json())
-    .then(result => {
-      if (result.success) {
-        loadBooks();
-      }
+function borrowBook(title) {
+  const fd = new FormData();
+  fd.append('title', title);
+  fetch('/borrow_book', { method: 'POST', body: fd })
+    .then(r => r.json()).then(res => {
+      if (res.success) loadBooks();
+      else alert('No copies left!');
+    });
+}
+
+function returnBook(title) {
+  const fd = new FormData();
+  fd.append('title', title);
+  fetch('/return_book', { method: 'POST', body: fd })
+    .then(r => r.json()).then(res => {
+      if (res.success) loadBooks();
     });
 }
 
